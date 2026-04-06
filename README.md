@@ -8,15 +8,11 @@ demonstrating a modern ELT pipeline using real-world aviation delay data.
 ---
 
 ## Architecture
-Sources          Transform       Storage              Warehouse      BI
---------         ---------       -------              ---------      --
-CSV (ERP)   -->              --> Azure Data Lake   --> Azure SQL --> Power BI
-SQL Server  --> Python+Pandas --> Bronze/Silver/Gold   Star Schema    Dashboard
-JSON Sensors-->              --> ADLS Gen2          
-                                      |
-                             Azure Data Factory
-                             (Orchestration)
-                             
+The pipeline ingests data from three heterogeneous sources — a CSV file simulating an ERP export, a SQL Server database running in Docker with airport reference data, and a JSON file with simulated sensor readings. Python and Pandas extract and transform the data, which is then loaded into Azure Data Lake Storage Gen2 following the Medallion Architecture. Azure Data Factory orchestrates the movement between layers. The curated data is loaded into Azure SQL Database as a star schema data warehouse. Power BI connects to the warehouse to deliver interactive dashboards.
+
+## Medallion Architecture:
+The Bronze layer stores raw data exactly as ingested from sources. The Silver layer contains cleaned and transformed Parquet files ready for loading. The Gold layer is the star schema in Azure SQL Database optimised for analytical queries and Power BI consumption.
+
 Azure Data Factory orchestrates the full pipeline
 
 ---
@@ -49,23 +45,7 @@ Azure Data Factory orchestrates the full pipeline
 
 ## Star Schema
 +-------------+
-                    |  dim_day    |
-                    +-------------+
-                          |
-+-------------+    +-------------+    +-------------+
-| dim_airline |----| fact_flights |----|  dim_time   |
-+-------------+    +-------------+    +-------------+
-                    |           |
-+-------------+    |    +-------------+
-| dim_airport |----+    | dim_weather  |
-+-------------+         +-------------+
-
-fact_flights (539,379 rows) -- central table
-dim_airline  (18 rows)      -- airline details + alliance
-dim_airport  (872 rows)     -- airport coords for map
-dim_day      (7 rows)       -- day name + weekend flag
-dim_time     (24 rows)      -- hour + period of day
-dim_weather  (360 rows)     -- simulated sensor data
+The data model follows a star schema with fact_flights as the central table containing 539,379 rows — one per flight. Four dimension tables surround it: dim_airline with 18 airlines including alliance information, dim_airport with 872 airports and geographic coordinates for map visualisation, dim_day with the 7 days of the week and weekend flag, dim_time with 24 hourly slots and period classification (Morning, Afternoon, Evening, Night), and dim_weather with 360 simulated sensor readings per airport and hour.
 
 **fact_flights** — 539,379 rows, one per flight
 **dim_airline** — 18 airlines with alliance info
