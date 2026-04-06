@@ -8,12 +8,15 @@ demonstrating a modern ELT pipeline using real-world aviation delay data.
 ---
 
 ## Architecture
-CSV (ERP) ─────┐
-├                ──► Python ELT ──► Azure Data Lake ──► Azure SQL DW ──► Power BI
-SQL Server ────┤                   (Medallion)          (Star Schema)
-│                              Bronze → Silver → Gold
-JSON Sensors ──┘
-
+Sources          Transform       Storage              Warehouse      BI
+--------         ---------       -------              ---------      --
+CSV (ERP)   -->              --> Azure Data Lake   --> Azure SQL --> Power BI
+SQL Server  --> Python+Pandas --> Bronze/Silver/Gold   Star Schema    Dashboard
+JSON Sensors-->              --> ADLS Gen2          
+                                      |
+                             Azure Data Factory
+                             (Orchestration)
+                             
 Azure Data Factory orchestrates the full pipeline
 
 ---
@@ -45,9 +48,24 @@ Azure Data Factory orchestrates the full pipeline
 ---
 
 ## Star Schema
-dim_airline ──┐
-dim_airport ──┤── fact_flights ──-── dim_day
-dim_weather ──┘        └── dim_time
++-------------+
+                    |  dim_day    |
+                    +-------------+
+                          |
++-------------+    +-------------+    +-------------+
+| dim_airline |----| fact_flights |----|  dim_time   |
++-------------+    +-------------+    +-------------+
+                    |           |
++-------------+    |    +-------------+
+| dim_airport |----+    | dim_weather  |
++-------------+         +-------------+
+
+fact_flights (539,379 rows) -- central table
+dim_airline  (18 rows)      -- airline details + alliance
+dim_airport  (872 rows)     -- airport coords for map
+dim_day      (7 rows)       -- day name + weekend flag
+dim_time     (24 rows)      -- hour + period of day
+dim_weather  (360 rows)     -- simulated sensor data
 
 **fact_flights** — 539,379 rows, one per flight
 **dim_airline** — 18 airlines with alliance info
